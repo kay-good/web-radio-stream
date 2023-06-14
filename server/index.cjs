@@ -22,7 +22,7 @@ ffprobe('./songs/2.mp3').then((info) => {
 }).catch((err) => {
   console.error(err);
 }).then(() => {
-  const throttle = new Throttle(128000)
+  const throttle = new Throttle(bitrate / 8)
   readable.pipe(throttle).on('data', (chunk) => {
     counter = counter + 1
     console.log("chunk " + counter)
