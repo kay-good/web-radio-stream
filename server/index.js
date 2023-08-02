@@ -6,7 +6,11 @@ import queue from "./queue.js";
 const PORT = 3000;
 const app = express();
 const server = http.createServer(app);
-const io = new IOServer(server);
+const io = new IOServer(server, {
+  cors: {
+      origin: "*"
+  },
+});
 
 (async () => {
   await queue.loadTracks("songs");

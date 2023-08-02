@@ -3,20 +3,24 @@
     <h1>B</h1>
     <p>This is an about page used to illustrate mapping a view to a router with Vue Router.</p>
     <button @click="onClickMic">{{ title }}</button>
-    <button @click="execCommand('pause')">Say hello</button>
-    <button @click="execCommand('resume')">Say bye</button>
+    <button @click="execCommand('pause')">Say pause</button>
+    <button @click="execCommand('resume')">Say resume</button>
   </div>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue'
 import { AudioRecorder } from "jnaudiostream";
+import { io } from "socket.io-client";
+
+const URL = "http://localhost:3000";
 
 const recorderRef = ref(new AudioRecorder({}, 100));
-const recording = ref(false)
-const title = `${recording ? "Stop" : "Start"} recording`;
+let recording = ref(false)
+const socketRef = ref(io(URL)).value;
+const title = `${recording.value ? "Stop" : "Start"} recording`;
 
-watch(socket, (newSocket) => {
+watch(socketRef, (newSocket) => {
   if (!newSocket) return;
   const recorder = recorderRef.value;
 
@@ -41,7 +45,7 @@ const onClickMic = () => {
 };
 
 const execCommand = (command) => {
-  socket.emit("control", command);
+  socketRef.emit("control", command);
 };
 
 
