@@ -3,7 +3,7 @@
     <canvas id="canvas"></canvas>
     <h1>C</h1>
     <button @click="playAudio">Play audio</button>
-    <audio :src="`${URL}/stream`" controls id="audio" crossorigin="anonymous"/>
+    <audio :src="`${URL}/stream`" controls id="audio" crossorigin="anonymous" />
     <p>Count is: {{ buttonClicked }}</p>
     <button @click="greet">Greet</button>
   </div>
@@ -22,11 +22,49 @@ let buttonClicked = ref(false);
 let container = null
 let canvas = null
 let audio1 = null
+let ctx = null
+let audioCtx = null
 
 function playAudio() {
   streamerRef = ref(new AudioStreamer());
   buttonClicked.value = true
-  console.log(222222222222)
+  console.log("play click")
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let audioSource = null;
+  let analyser = null;
+
+
+  audioSource = audioCtx.createMediaElementSource(audio1);
+  analyser = audioCtx.createAnalyser();
+  audioSource.connect(analyser);
+  analyser.connect(audioCtx.destination);
+
+  analyser.fftSize = 128;
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+  const barWidth = canvas.width / bufferLength;
+  console.log(ctx)
+ 
+  let x = 0;
+  function animate() {
+    x = 0;
+    let barHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    analyser.getByteFrequencyData(dataArray);
+    for (let i = 0; i < bufferLength; i++) {
+      barHeight = dataArray[i];
+      ctx.fillStyle = "gray";
+      //ctx.fillRect(30, 50, 100, 200);
+      ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+      //console.log(x, canvas.height - barHeight, barWidth, barHeight)
+      x += barWidth;
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
 };
 
 function greet() {
@@ -36,7 +74,7 @@ function greet() {
 watch(buttonClicked, (newValue, oldValue) => {
   if (newValue) {
     audio1.play();
-    console.log("play")
+    console.log("play watch")
     watch(
       () => socketRef,
       (newSocket, oldSocket) => {
@@ -82,41 +120,7 @@ onMounted(() => {
   console.log(canvas)
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  const ctx = canvas.getContext("2d");
-
-
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  let audioSource = null;
-  let analyser = null;
-
-
-  audioSource = audioCtx.createMediaElementSource(audio1);
-  analyser = audioCtx.createAnalyser();
-  audioSource.connect(analyser);
-  analyser.connect(audioCtx.destination);
-
-  analyser.fftSize = 128;
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength);
-  const barWidth = canvas.width / bufferLength;
-
-  let x = 0;
-  function animate() {
-    x = 0;
-    let barHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    analyser.getByteFrequencyData(dataArray);
-    for (let i = 0; i < bufferLength; i++) {
-      barHeight = dataArray[i];
-      ctx.fillStyle = "white";
-      ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-      x += barWidth;
-    }
-
-    requestAnimationFrame(animate);
-  }
-
-  animate();
+  ctx = canvas.getContext("2d");
 })
 
 </script>
