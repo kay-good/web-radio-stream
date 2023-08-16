@@ -1,6 +1,7 @@
 import express from "express";
 import http from "http";
 import { Server as IOServer } from "socket.io";
+import cors from "cors";
 import queue from "./queue.js";
 
 const PORT = 3000;
@@ -11,6 +12,10 @@ const io = new IOServer(server, {
       origin: "*"
   },
 });
+
+app.use(cors({
+  origin: '*'
+}));
 
 (async () => {
   await queue.loadTracks("songs");

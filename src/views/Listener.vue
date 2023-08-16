@@ -1,53 +1,122 @@
 <template>
-  <div>
+  <div id="container">
+    <canvas id="canvas"></canvas>
     <h1>C</h1>
-    <audio :src="`${URL}/stream`" autoPlay controls />
+    <button @click="playAudio">Play audio</button>
+    <audio :src="`${URL}/stream`" controls id="audio" crossorigin="anonymous"/>
+    <p>Count is: {{ buttonClicked }}</p>
+    <button @click="greet">Greet</button>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted, onMounted } from 'vue'
 import { AudioStreamer } from "jnaudiostream";
 import { io } from "socket.io-client";
 
-const streamerRef = ref(new AudioStreamer());
-const URL = "http://localhost:3000";
+let streamerRef = null
 const socketRef = ref(io(URL)).value;
+const URL = "http://localhost:3000";
+let buttonClicked = ref(false);
 
+let container = null
+let canvas = null
+let audio1 = null
 
-watch(
-  () => socketRef,
-  (newSocket, oldSocket) => {
-    if (oldSocket) {
-      oldSocket.off('bufferHeader');
-      oldSocket.off('stream');
-    }
+function playAudio() {
+  streamerRef = ref(new AudioStreamer());
+  buttonClicked.value = true
+  console.log(222222222222)
+};
 
-    if (newSocket) {
-      const streamer = streamerRef.value;
+function greet() {
+  alert(`Hello ${buttonClicked}!`)
+}
 
-      socketRef.on('bufferHeader', (packet) => {
-        if (streamer.mediaBuffer) {
-          return;
+watch(buttonClicked, (newValue, oldValue) => {
+  if (newValue) {
+    audio1.play();
+    console.log("play")
+    watch(
+      () => socketRef,
+      (newSocket, oldSocket) => {
+        if (oldSocket) {
+          oldSocket.off('bufferHeader');
+          oldSocket.off('stream');
         }
 
-        streamer.setBufferHeader(packet);
-        streamer.playStream();
-      });
+        if (newSocket) {
+          const streamer = streamerRef.value;
 
-      socketRef.on('stream', (packet) => {
-        if (!streamer.mediaBuffer) {
-          return;
+          socketRef.on('bufferHeader', (packet) => {
+            if (streamer.mediaBuffer) {
+              return;
+            }
+
+            streamer.setBufferHeader(packet);
+            streamer.playStream();
+          });
+
+          socketRef.on('stream', (packet) => {
+            if (!streamer.mediaBuffer) {
+              return;
+            }
+            streamer.receiveBuffer(packet);
+          });
         }
-        streamer.receiveBuffer(packet);
-      });
-    }
-  },
-  { immediate: true }
-);
+      },
+      { immediate: true }
+    );
+  }
+});
 
 onUnmounted(() => {
   socketRef.off('bufferHeader');
   socketRef.off('stream');
 });
+
+onMounted(() => {
+  container = document.getElementById("container");
+  canvas = document.getElementById("canvas");
+  audio1 = document.getElementById("audio");
+  console.log(canvas)
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext("2d");
+
+
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let audioSource = null;
+  let analyser = null;
+
+
+  audioSource = audioCtx.createMediaElementSource(audio1);
+  analyser = audioCtx.createAnalyser();
+  audioSource.connect(analyser);
+  analyser.connect(audioCtx.destination);
+
+  analyser.fftSize = 128;
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+  const barWidth = canvas.width / bufferLength;
+
+  let x = 0;
+  function animate() {
+    x = 0;
+    let barHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    analyser.getByteFrequencyData(dataArray);
+    for (let i = 0; i < bufferLength; i++) {
+      barHeight = dataArray[i];
+      ctx.fillStyle = "white";
+      ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+      x += barWidth;
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+})
+
 </script>
